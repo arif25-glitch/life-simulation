@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jev Life Simulation - Web</title>
+    <style>
+        body { background: #1e1e1e; color: white; font-family: Arial; display: flex; flex-direction: column; align-items: center; }
+        canvas { background: #1e1e1e; border: 2px solid #444; margin-top: 20px; }
+        #stats { margin-top: 20px; font-size: 18px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <h1>Jev Life Simulation - Web UI</h1>
+    <canvas id="simCanvas" width="800" height="600"></canvas>
+    <div id="stats">Loading agent state...</div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const statsDiv = document.getElementById('stats');
+
+        async function update() {
+            try {
+                const res = await fetch('/state');
+                const data = await res.json();
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw Locations
+                const locs = data.locations;
+                const colors = { HOME: '#6464fa', FOREST: '#228b22', MARKET: '#ffd700' };
+                
+                for (let loc in locs) {
+                    const [x, y] = locs[loc];
+                    ctx.fillStyle = colors[loc];
+                    ctx.beginPath();
+                    ctx.arc(x, y, 40, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(loc, x - 20, y + 55);
+                }
+
+                // Draw Agent
+                const agent = data.agent;
+                ctx.fillStyle = '#00ff64';
+                ctx.beginPath();
+                ctx.arc(agent.pos[0], agent.pos[1], 15, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Update Stats
+                statsDiv.innerHTML = `
+                    <b>Agent:</b> ${agent.name} <br>
+                    <b>Action:</b> ${data.action} <br>
+                    <b>Hunger:</b> ${agent.state.hunger} | <b>Energy:</b> ${agent.state.energy} <br>
+                    <b>Wood:</b> ${agent.state.wood_inventory} | <b>Money:</b> ${agent.state.money}
+                `;
+            } catch (e) {
+                console.error("Error fetching state:", e);
+            }
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
+</body>
+</html>
