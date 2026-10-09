@@ -1,9 +1,9 @@
 
 import pygame
-from core.engine import MockJevEngine
-from core.agent import WoodcutterAgent
-from core.world import World
-from ui.renderer import Renderer
+from src.core.engine import MockJevEngine
+from src.core.agent import WoodcutterAgent
+from src.core.world import World
+from src.ui.renderer import Renderer
 
 def main():
     pygame.init()
