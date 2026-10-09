@@ -1,16 +1,21 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Jev Life Simulation - Web</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jev Life Simulation - Visual Web UI</title>
     <style>
-        body { background: #1e1e1e; color: white; font-family: Arial; display: flex; flex-direction: column; align-items: center; }
-        canvas { background: #1e1e1e; border: 2px solid #444; margin-top: 20px; }
-        #stats { margin-top: 20px; font-size: 18px; line-height: 1.5; }
+        body { background: #1e1e1e; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        h1 { margin-bottom: 10px; color: #00ff64; }
+        canvas { background: #2a2a2a; border: 4px solid #444; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: crosshair; }
+        #stats { margin-top: 20px; background: #333; padding: 15px 25px; border-radius: 10px; font-size: 18px; line-height: 1.6; border-left: 5px solid #00ff64; min-width: 300px; }
+        .stat-label { color: #aaa; font-weight: normal; }
+        .stat-value { color: #fff; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>Jev Life Simulation - Web UI</h1>
+    <h1>🌲 Jev Life Simulation 🌲</h1>
     <canvas id="simCanvas" width="800" height="600"></canvas>
     <div id="stats">Loading agent state...</div>
 
@@ -19,41 +24,47 @@
         const ctx = canvas.getContext('2d');
         const statsDiv = document.getElementById('stats');
 
+        // Asset Preloading
+        const assets = {
+            agent: new Image(),
+            home: new Image(),
+            forest: new Image(),
+            market: new Image()
+        };
+
+        assets.agent.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Budi&backgroundColor=b6e3f4';
+        assets.home.src = 'https://placehold.co/64x64/4a90e2/white?text=HOME';
+        assets.forest.src = 'https://placehold.co/64x64/2ecc71/white?text=WOOD';
+        assets.market.src = 'https://placehold.co/64x64/f1c40f/white?text=SHOP';
+
         async function update() {
             try {
                 const res = await fetch('/state');
                 const data = await res.json();
                 
-                // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 // Draw Locations
                 const locs = data.locations;
-                const colors = { HOME: '#6464fa', FOREST: '#228b22', MARKET: '#ffd700' };
+                const imgMap = { HOME: assets.home, FOREST: assets.forest, MARKET: assets.market };
                 
                 for (let loc in locs) {
                     const [x, y] = locs[loc];
-                    ctx.fillStyle = colors[loc];
-                    ctx.beginPath();
-                    ctx.arc(x, y, 40, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = 'white';
-                    ctx.fillText(loc, x - 20, y + 55);
+                    // Draw image centered
+                    ctx.drawImage(imgMap[loc], x - 32, y - 32, 64, 64);
                 }
 
                 // Draw Agent
                 const agent = data.agent;
-                ctx.fillStyle = '#00ff64';
-                ctx.beginPath();
-                ctx.arc(agent.pos[0], agent.pos[1], 15, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.drawImage(assets.agent, agent.pos[0] - 20, agent.pos[1] - 20, 40, 40);
 
                 // Update Stats
                 statsDiv.innerHTML = `
-                    <b>Agent:</b> ${agent.name} <br>
-                    <b>Action:</b> ${data.action} <br>
-                    <b>Hunger:</b> ${agent.state.hunger} | <b>Energy:</b> ${agent.state.energy} <br>
-                    <b>Wood:</b> ${agent.state.wood_inventory} | <b>Money:</b> ${agent.state.money}
+                    <div><span class="stat-label">Character:</span> <span class="stat-value">${agent.name}</span></div>
+                    <div><span class="stat-label">Current Action:</span> <span class="stat-value" style="color:#00ff64">${data.action}</span></div>
+                    <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+                    <div><span class="stat-label">Hunger:</span> <span class="stat-value">${agent.state.hunger}</span> | <span class="stat-label">Energy:</span> <span class="stat-value">${agent.state.energy}</span></div>
+                    <div><span class="stat-label">Wood:</span> <span class="stat-value">${agent.state.wood_inventory}</span> | <span class="stat-label">Money:</span> <span class="stat-value">${agent.state.money}</span></div>
                 `;
             } catch (e) {
                 console.error("Error fetching state:", e);
