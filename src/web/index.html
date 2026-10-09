@@ -4,27 +4,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jev Life Simulation - Visual Web UI</title>
+    <title>Jev Life Simulation - Pro Visuals</title>
     <style>
-        body { background: #1e1e1e; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
-        h1 { margin-bottom: 10px; color: #00ff64; }
-        canvas { background: #2a2a2a; border: 4px solid #444; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: crosshair; }
-        #stats { margin-top: 20px; background: #333; padding: 15px 25px; border-radius: 10px; font-size: 18px; line-height: 1.6; border-left: 5px solid #00ff64; min-width: 300px; }
-        .stat-label { color: #aaa; font-weight: normal; }
-        .stat-value { color: #fff; font-weight: bold; }
+        body { 
+            background: #121212; 
+            color: #e0e0e0; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            margin: 0; 
+            padding: 20px; 
+            overflow: hidden;
+        }
+        h1 { 
+            margin-bottom: 15px; 
+            color: #4caf50; 
+            font-weight: 800; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: -1px;
+        }
+        .game-container {
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 8px solid #333;
+        }
+        canvas { 
+            background: #2d5a27; 
+            display: block;
+        }
+        #ui-panel { 
+            margin-top: 20px; 
+            background: rgba(40, 40, 40, 0.9); 
+            padding: 20px 30px; 
+            border-radius: 15px; 
+            font-size: 16px; 
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            border: 1px solid #444;
+            backdrop-filter: blur(10px);
+            min-width: 600px;
+        }
+        .stat-group { display: flex; flex-direction: column; }
+        .stat-label { color: #888; font-size: 12px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; }
+        .stat-value { color: #fff; font-size: 20px; font-weight: 600; }
+        .highlight { color: #4caf50; }
     </style>
 </head>
 <body>
-    <h1>🌲 Jev Life Simulation 🌲</h1>
-    <canvas id="simCanvas" width="800" height="600"></canvas>
-    <div id="stats">Loading agent state...</div>
+    <h1>🌲 JEV LIFE SIMULATOR 🌲</h1>
+    <div class="game-container">
+        <canvas id="simCanvas" width="800" height="600"></canvas>
+    </div>
+    <div id="ui-panel">
+        <div class="stat-group">
+            <span class="stat-label">Character</span>
+            <span id="stat-name" class="stat-value">-</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label">Current Task</span>
+            <span id="stat-action" class="stat-value highlight">-</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label">Resources</span>
+            <span id="stat-res" class="stat-value">-</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label">Hunger</span>
+            <span id="stat-hunger" class="stat-value">-</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label">Energy</span>
+            <span id="stat-energy" class="stat-value">-</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label">Money</span>
+            <span id="stat-money" class="stat-value">-</span>
+        </div>
+    </div>
 
     <script>
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
-        const statsDiv = document.getElementById('stats');
-
-        // Asset Preloading
+        
         const assets = {
             agent: new Image(),
             home: new Image(),
@@ -33,16 +98,35 @@
         };
 
         assets.agent.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Budi&backgroundColor=b6e3f4';
-        assets.home.src = 'https://placehold.co/64x64/4a90e2/white?text=HOME';
-        assets.forest.src = 'https://placehold.co/64x64/2ecc71/white?text=WOOD';
-        assets.market.src = 'https://placehold.co/64x64/f1c40f/white?text=SHOP';
+        assets.home.src = 'https://placehold.co/100x100/4a90e2/white?text=🏠';
+        assets.forest.src = 'https://placehold.co/100x100/2ecc71/white?text=🌳';
+        assets.market.src = 'https://placehold.co/100x100/f1c40f/white?text=🏪';
+
+        let lastAction = "";
+        let actionBubble = { text: "", opacity: 0, y: 0 };
+
+        function triggerBubble(text) {
+            actionBubble = { text: text, opacity: 1, y: 0 };
+        }
 
         async function update() {
             try {
                 const res = await fetch('/state');
                 const data = await res.json();
                 
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // Draw Grass Texture (Pattern)
+                ctx.fillStyle = '#3a6b35';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Subtle grid for depth
+                ctx.strokeStyle = '#346330';
+                ctx.lineWidth = 1;
+                for(let i=0; i<canvas.width; i+=40) {
+                    ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
+                }
+                for(let i=0; i<canvas.height; i+=40) {
+                    ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
+                }
 
                 // Draw Locations
                 const locs = data.locations;
@@ -50,22 +134,52 @@
                 
                 for (let loc in locs) {
                     const [x, y] = locs[loc];
-                    // Draw image centered
-                    ctx.drawImage(imgMap[loc], x - 32, y - 32, 64, 64);
+                    
+                    // Shadow
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.beginPath();
+                    ctx.ellipse(x, y + 30, 40, 20, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Image
+                    ctx.drawImage(imgMap[loc], x - 50, y - 50, 100, 100);
                 }
 
                 // Draw Agent
                 const agent = data.agent;
-                ctx.drawImage(assets.agent, agent.pos[0] - 20, agent.pos[1] - 20, 40, 40);
+                
+                // Agent Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(agent.pos[0], agent.pos[1] + 15, 15, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
 
-                // Update Stats
-                statsDiv.innerHTML = `
-                    <div><span class="stat-label">Character:</span> <span class="stat-value">${agent.name}</span></div>
-                    <div><span class="stat-label">Current Action:</span> <span class="stat-value" style="color:#00ff64">${data.action}</span></div>
-                    <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
-                    <div><span class="stat-label">Hunger:</span> <span class="stat-value">${agent.state.hunger}</span> | <span class="stat-label">Energy:</span> <span class="stat-value">${agent.state.energy}</span></div>
-                    <div><span class="stat-label">Wood:</span> <span class="stat-value">${agent.state.wood_inventory}</span> | <span class="stat-label">Money:</span> <span class="stat-value">${agent.state.money}</span></div>
-                `;
+                ctx.drawImage(assets.agent, agent.pos[0] - 25, agent.pos[1] - 25, 50, 50);
+
+                // Action Bubble Logic
+                if (data.action !== lastAction) {
+                    const icons = { CHOP_TREE: '🪵', EAT: '🍖', SLEEP: '💤', SELL_WOOD: '💰' };
+                    triggerBubble(icons[data.action] || '...');
+                    lastAction = data.action;
+                }
+
+                if (actionBubble.opacity > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${actionBubble.opacity})`;
+                    ctx.font = '30px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(actionBubble.text, agent.pos[0], agent.pos[1] - 40 - actionBubble.y);
+                    actionBubble.y += 0.5;
+                    actionBubble.opacity -= 0.01;
+                }
+
+                // Update UI Panel
+                document.getElementById('stat-name').innerText = agent.name;
+                document.getElementById('stat-action').innerText = data.action;
+                document.getElementById('stat-res').innerText = `${agent.state.wood_inventory} Wood | ${agent.state.money} Gold`;
+                document.getElementById('stat-hunger').innerText = agent.state.hunger + "%";
+                document.getElementById('stat-energy').innerText = agent.state.energy + "%";
+                document.getElementById('stat-money').innerText = agent.state.money;
+
             } catch (e) {
                 console.error("Error fetching state:", e);
             }
