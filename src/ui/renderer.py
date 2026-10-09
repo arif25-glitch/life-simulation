@@ -1,5 +1,6 @@
 
 import pygame
+import pygame.font
 from src.core.world import LOC_COORDS
 
 COLOR_BG = (30, 30, 30)
@@ -12,19 +13,28 @@ COLOR_TEXT = (255, 255, 255)
 class Renderer:
     def __init__(self, screen):
         self.screen = screen
-        self.font = pygame.font.SysFont("Arial", 18)
+        # Use None for the default Pygame font to avoid system font lookup crashes
+        try:
+            self.font = pygame.font.Font(None, 24)
+        except Exception as e:
+            print(f"Warning: Could not load default font: {e}")
+            self.font = None
 
     def render_world(self):
         self.screen.fill(COLOR_BG)
         for loc, coord in LOC_COORDS.items():
             color = COLOR_HOME if loc == "HOME" else COLOR_FOREST if loc == "FOREST" else COLOR_MARKET
             pygame.draw.circle(self.screen, color, coord, 40)
-            self.screen.blit(self.font.render(loc, True, COLOR_TEXT), (coord[0]-20, coord[1]+50))
+            if self.font:
+                self.screen.blit(self.font.render(loc, True, COLOR_TEXT), (coord[0]-20, coord[1]+50))
 
     def render_agent(self, agent):
         pygame.draw.circle(self.screen, COLOR_AGENT, (int(agent.pos[0]), int(agent.pos[1])), 15)
 
     def render_ui(self, agent, action):
+        if not self.font:
+            return
+            
         stats = [
             f"Agent: {agent.name}",
             f"Action: {action}",
