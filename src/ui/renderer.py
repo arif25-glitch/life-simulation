@@ -1,6 +1,6 @@
 
 import pygame
-from ..core.world import LOC_COORDS
+from src.core.world import LOC_COORDS
 
 COLOR_BG = (30, 30, 30)
 COLOR_AGENT = (0, 255, 100)

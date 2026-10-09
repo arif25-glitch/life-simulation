@@ -1,5 +1,5 @@
 
-from .world import LOC_COORDS
+from src.core.world import LOC_COORDS
 
 class Agent:
     def __init__(self, name):
